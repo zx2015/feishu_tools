@@ -1,0 +1,15 @@
+# 飞书配置
+feishu:
+  app_id: "cli_xxxxxxxx"       # 飞书应用的 App ID
+  app_secret: "xxxxxxxxxxxx"   # 飞书应用的 App Secret
+  webhook_url: ""             # 机器人 Webhook 地址 (可选)
+  default_receive_id: "ou_xxx" # 默认接收消息的人
+
+# VPS 监控配置 (BandwagonHost/64clouds)
+vps:
+  veid: "123456"
+  api_key: "private_key_here"
+
+# 其他全局配置
+settings:
+  log_level: "INFO"

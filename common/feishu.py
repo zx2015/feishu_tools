@@ -1,0 +1,171 @@
+import lark_oapi as lark
+from lark_oapi.api.im.v1 import *
+import json
+import logging
+import requests
+
+class FeishuBot:
+    """
+    飞书机器人集成类。
+    支持两种模式：
+    1. 应用模式：使用 app_id 和 app_secret，功能更强（发消息给个人、操作文档等）。
+    2. Webhook 模式：仅需 webhook_url，用于简单的群组通知。
+    """
+    def __init__(self, app_id: str = None, app_secret: str = None, webhook_url: str = None):
+        self.app_id = app_id
+        self.app_secret = app_secret
+        self.webhook_url = webhook_url
+        self.client = None
+
+        if app_id and app_secret:
+            self.client = lark.Client.builder() \
+                .app_id(app_id) \
+                .app_secret(app_secret) \
+                .log_level(lark.LogLevel.INFO) \
+                .build()
+
+    def send_text_to_chat(self, receive_id: str, content: str, receive_id_type: str = "open_id"):
+        """
+        应用模式：发送文本消息给指定接收者（用户或群聊）
+        """
+        if not self.client:
+            logging.error("未初始化 App ID/Secret，无法使用应用模式发送消息")
+            return None
+
+        request = CreateMessageRequest.builder() \
+            .receive_id_type(receive_id_type) \
+            .request_body(CreateMessageRequestBody.builder() \
+                .receive_id(receive_id) \
+                .msg_type("text") \
+                .content(json.dumps({"text": content})) \
+                .build()) \
+            .build()
+
+        response = self.client.im.v1.message.create(request)
+        if not response.success():
+            logging.error(f"发送消息失败: {response.code}, {response.msg}")
+        return response
+
+    def send_card_to_chat(self, receive_id: str, title: str, content: str = None, fields: list = None, status: str = "info", receive_id_type: str = "open_id"):
+        """
+        应用模式：发送卡片消息给指定接收者。支持内容正文或字段列表（表格感）。
+        """
+        if not self.client:
+            logging.error("未初始化 App ID/Secret")
+            return None
+
+        colors = {
+            "info": "blue",
+            "success": "green",
+            "warning": "orange",
+            "error": "red"
+        }
+        header_template = colors.get(status, "blue")
+
+        elements = []
+        if content:
+            elements.append({
+                "tag": "div",
+                "text": {"content": content, "tag": "lark_md"}
+            })
+        
+        if fields:
+            elements.append({
+                "tag": "div",
+                "fields": fields
+            })
+
+        elements.append({"tag": "hr"})
+        elements.append({
+            "tag": "note",
+            "elements": [{"content": "来自 Feishu Tools 自动化提醒", "tag": "plain_text"}]
+        })
+
+        card_content = {
+            "header": {
+                "template": header_template,
+                "title": {"content": title, "tag": "plain_text"}
+            },
+            "elements": elements
+        }
+
+        request = CreateMessageRequest.builder() \
+            .receive_id_type(receive_id_type) \
+            .request_body(CreateMessageRequestBody.builder() \
+                .receive_id(receive_id) \
+                .msg_type("interactive") \
+                .content(json.dumps(card_content)) \
+                .build()) \
+            .build()
+
+        response = self.client.im.v1.message.create(request)
+        if not response.success():
+            logging.error(f"发送卡片消息失败: {response.code}, {response.msg}")
+        return response
+
+    def send_webhook_text(self, content: str):
+        """
+        Webhook 模式：发送纯文本消息
+        """
+        if not self.webhook_url:
+            logging.error("未提供 Webhook URL")
+            return None
+            
+        data = {
+            "msg_type": "text",
+            "content": {"text": content}
+        }
+        return self._post_webhook(data)
+
+    def send_webhook_card(self, title: str, content: str, status: str = "info"):
+        """
+        Webhook 模式：发送卡片消息
+        """
+        if not self.webhook_url:
+            logging.error("未提供 Webhook URL")
+            return None
+
+        colors = {
+            "info": "blue",
+            "success": "green",
+            "warning": "orange",
+            "error": "red"
+        }
+        header_template = colors.get(status, "blue")
+
+        card = {
+            "header": {
+                "template": header_template,
+                "title": {"content": title, "tag": "plain_text"}
+            },
+            "elements": [
+                {
+                    "tag": "div",
+                    "text": {"content": content, "tag": "lark_md"}
+                },
+                {"tag": "hr"},
+                {
+                    "tag": "note",
+                    "elements": [{"content": "来自 Feishu Tools 自动化提醒", "tag": "plain_text"}]
+                }
+            ]
+        }
+
+        data = {
+            "msg_type": "interactive",
+            "card": card
+        }
+        return self._post_webhook(data)
+
+    def _post_webhook(self, data: dict):
+        try:
+            resp = requests.post(
+                self.webhook_url,
+                data=json.dumps(data),
+                headers={'Content-Type': 'application/json'}
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            logging.error(f"Webhook 请求异常: {e}")
+            return None
