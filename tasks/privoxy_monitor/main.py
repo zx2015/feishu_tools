@@ -187,8 +187,9 @@ def main():
                 reverse=True
             )
             
-            # 格式化 Top 5 聚合详情
-            detail_list = []
+            # 格式化 Top 5 聚合详情为表格形式
+            table_header = "| 源IP | 目标Host | 状态 | 次数 | 时间范围 |\n| :--- | :--- | :---: | :---: | :--- |\n"
+            table_rows = []
             for (client_ip, host, status), info in sorted_aggs[:5]:
                 count = info["count"]
                 first_t = info["first_time"]
@@ -199,18 +200,13 @@ def main():
                     if first_t.strftime('%H:%M') == last_t.strftime('%H:%M'):
                         time_str = first_t.strftime('%m-%d %H:%M')
                     else:
-                        time_str = f"{first_t.strftime('%m-%d %H:%M')} ~ {last_t.strftime('%H:%M')}"
+                        time_str = f"{first_t.strftime('%m-%d %H:%M')}~{last_t.strftime('%H:%M')}"
                 else:
-                    time_str = f"{first_t.strftime('%m-%d %H:%M')} ~ {last_t.strftime('%m-%d %H:%M')}"
+                    time_str = f"{first_t.strftime('%m-%d %H:%M')}~{last_t.strftime('%m-%d %H:%M')}"
                 
-                detail_list.append(
-                    f"• **源IP**: `{client_ip}` ➔ **Host**: `{host}` ({status})\n"
-                    f"  **异常频次**: {count} 次 | **时间范围**: {time_str}"
-                )
-            details_text = "\n".join(detail_list) if detail_list else "无"
-
-            # 格式化典型错误日志
-            sample_text = "\n".join([f"`{line}`" for line in analysis["sample_errors"]])
+                table_rows.append(f"| `{client_ip}` | `{host}` | `{status}` | **{count}** | {time_str} |")
+            
+            table_text = table_header + "\n".join(table_rows) if table_rows else "无"
             
             fields = [
                 {
@@ -227,11 +223,7 @@ def main():
                 },
                 {
                     "is_short": False,
-                    "text": {"tag": "lark_md", "content": f"📊 **主要故障详情 (Top 5)**\n{details_text}"}
-                },
-                {
-                    "is_short": False,
-                    "text": {"tag": "lark_md", "content": f"📋 **典型异常日志截取**\n{sample_text}"}
+                    "text": {"tag": "lark_md", "content": f"📊 **主要故障详情 (Top 5)**\n\n{table_text}"}
                 }
             ]
             
