@@ -187,8 +187,75 @@ def main():
                 reverse=True
             )
             
-            # 格式化 Top 5 聚合详情为表格形式
-            table_header = "| 源IP | 目标Host | 状态 | 次数 | 时间范围 |\n| :--- | :--- | :---: | :---: | :--- |\n"
+            # 1. 构造基本信息段
+            info_element = {
+                "tag": "div",
+                "fields": [
+                    {
+                        "is_short": False,
+                        "text": {"tag": "lark_md", "content": f"📅 **监控周期**\n{time_window_str}"}
+                    },
+                    {
+                        "is_short": True,
+                        "text": {"tag": "lark_md", "content": f"⚠️ **异常总请求数**\n{total_errors} 次"}
+                    },
+                    {
+                        "is_short": True,
+                        "text": {"tag": "lark_md", "content": f"🛡️ **健康度评估**\n需要关注"}
+                    }
+                ]
+            }
+            
+            # 2. 构造表格标题段
+            title_element = {
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": "📊 **主要故障详情 (Top 5)**"}
+            }
+            
+            # 3. 构造原生表格组件
+            table_columns = [
+                {
+                    "name": "ip",
+                    "width": "auto",
+                    "display_name": {
+                        "tag": "plain_text",
+                        "content": "源IP"
+                    }
+                },
+                {
+                    "name": "host",
+                    "width": "auto",
+                    "display_name": {
+                        "tag": "plain_text",
+                        "content": "目标Host"
+                    }
+                },
+                {
+                    "name": "status",
+                    "width": "auto",
+                    "display_name": {
+                        "tag": "plain_text",
+                        "content": "状态"
+                    }
+                },
+                {
+                    "name": "count",
+                    "width": "auto",
+                    "display_name": {
+                        "tag": "plain_text",
+                        "content": "次数"
+                    }
+                },
+                {
+                    "name": "time",
+                    "width": "auto",
+                    "display_name": {
+                        "tag": "plain_text",
+                        "content": "时间范围"
+                    }
+                }
+            ]
+            
             table_rows = []
             for (client_ip, host, status), info in sorted_aggs[:5]:
                 count = info["count"]
@@ -204,33 +271,49 @@ def main():
                 else:
                     time_str = f"{first_t.strftime('%m-%d %H:%M')}~{last_t.strftime('%m-%d %H:%M')}"
                 
-                table_rows.append(f"| `{client_ip}` | `{host}` | `{status}` | **{count}** | {time_str} |")
+                table_rows.append({
+                    "ip": {
+                        "tag": "plain_text",
+                        "content": client_ip
+                    },
+                    "host": {
+                        "tag": "plain_text",
+                        "content": host
+                    },
+                    "status": {
+                        "tag": "plain_text",
+                        "content": status
+                    },
+                    "count": {
+                        "tag": "plain_text",
+                        "content": str(count)
+                    },
+                    "time": {
+                        "tag": "plain_text",
+                        "content": time_str
+                    }
+                })
+                
+            table_element = {
+                "tag": "table",
+                "page_size": 5,
+                "row_height": "low",
+                "freeze_first_column": False,
+                "columns": table_columns,
+                "rows": table_rows
+            }
             
-            table_text = table_header + "\n".join(table_rows) if table_rows else "无"
-            
-            fields = [
-                {
-                    "is_short": False,
-                    "text": {"tag": "lark_md", "content": f"📅 **监控周期**\n{time_window_str}"}
-                },
-                {
-                    "is_short": True,
-                    "text": {"tag": "lark_md", "content": f"⚠️ **异常总请求数**\n{total_errors} 次"}
-                },
-                {
-                    "is_short": True,
-                    "text": {"tag": "lark_md", "content": f"🛡️ **健康度评估**\n需要关注"}
-                },
-                {
-                    "is_short": False,
-                    "text": {"tag": "lark_md", "content": f"📊 **主要故障详情 (Top 5)**\n\n{table_text}"}
-                }
+            # 汇聚成自定义 elements 列表
+            elements = [
+                info_element,
+                title_element,
+                table_element
             ]
             
             bot.send_card_to_chat(
                 receive_id=receive_id,
                 title=title,
-                fields=fields,
+                elements=elements,
                 status="warning"
             )
     logging.info("分析完成并反馈飞书。")

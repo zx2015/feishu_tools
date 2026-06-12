@@ -46,9 +46,9 @@ class FeishuBot:
             logging.error(f"发送消息失败: {response.code}, {response.msg}")
         return response
 
-    def send_card_to_chat(self, receive_id: str, title: str, content: str = None, fields: list = None, status: str = "info", receive_id_type: str = "open_id"):
+    def send_card_to_chat(self, receive_id: str, title: str, content: str = None, fields: list = None, status: str = "info", receive_id_type: str = "open_id", elements: list = None):
         """
-        应用模式：发送卡片消息给指定接收者。支持内容正文或字段列表（表格感）。
+        应用模式：发送卡片消息给指定接收者。支持内容正文、字段列表或完全自定义的 elements 列表。
         """
         if not self.client:
             logging.error("未初始化 App ID/Secret")
@@ -62,21 +62,24 @@ class FeishuBot:
         }
         header_template = colors.get(status, "blue")
 
-        elements = []
-        if content:
-            elements.append({
-                "tag": "div",
-                "text": {"content": content, "tag": "lark_md"}
-            })
-        
-        if fields:
-            elements.append({
-                "tag": "div",
-                "fields": fields
-            })
+        card_elements = []
+        if elements is not None:
+            card_elements.extend(elements)
+        else:
+            if content:
+                card_elements.append({
+                    "tag": "div",
+                    "text": {"content": content, "tag": "lark_md"}
+                })
+            
+            if fields:
+                card_elements.append({
+                    "tag": "div",
+                    "fields": fields
+                })
 
-        elements.append({"tag": "hr"})
-        elements.append({
+        card_elements.append({"tag": "hr"})
+        card_elements.append({
             "tag": "note",
             "elements": [{"content": "来自 Feishu Tools 自动化提醒", "tag": "plain_text"}]
         })
@@ -86,7 +89,7 @@ class FeishuBot:
                 "template": header_template,
                 "title": {"content": title, "tag": "plain_text"}
             },
-            "elements": elements
+            "elements": card_elements
         }
 
         request = CreateMessageRequest.builder() \
