@@ -99,8 +99,8 @@ class FeishuBot:
             }
         }
 
-        # 调试日志：打印发送给飞书的卡片完整 JSON 结构
-        logging.info(f"发送的飞书卡片完整 JSON 结构:\n{json.dumps(card_content, indent=2, ensure_ascii=False)}")
+        # 调试日志：打印发送给飞书的卡片完整 JSON 结构 (如需调试可取消下行注释)
+        # logging.info(f"发送的飞书卡片完整 JSON 结构:\n{json.dumps(card_content, indent=2, ensure_ascii=False)}")
 
         request = CreateMessageRequest.builder() \
             .receive_id_type(receive_id_type) \
