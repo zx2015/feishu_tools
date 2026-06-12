@@ -57,8 +57,7 @@ def analyze_privoxy_log(log_path, cutoff_time):
     非独占式流式读取并解析 Privoxy 日志
     """
     total_errors = 0
-    host_counter = Counter()
-    host_status_map = {}  # host -> Counter(status_codes)
+    agg_errors = {}  # (client_ip, host, status_code) -> {"count": int, "first_time": datetime, "last_time": datetime}
     sample_errors = []
     
     if not os.path.exists(log_path):
@@ -88,14 +87,23 @@ def analyze_privoxy_log(log_path, cutoff_time):
                 # 状态码非 200 判定为代理请求异常
                 if status_code != "200":
                     total_errors += 1
+                    client_ip = match.group(1)
                     host_port = match.group(4)
                     # 提取 host (去除端口)
                     host = host_port.split(':')[0] if ':' in host_port else host_port
                     
-                    host_counter[host] += 1
-                    if host not in host_status_map:
-                        host_status_map[host] = Counter()
-                    host_status_map[host][status_code] += 1
+                    key = (client_ip, host, status_code)
+                    if key not in agg_errors:
+                        agg_errors[key] = {
+                            "count": 0,
+                            "first_time": log_time,
+                            "last_time": log_time
+                        }
+                    agg_errors[key]["count"] += 1
+                    if log_time < agg_errors[key]["first_time"]:
+                        agg_errors[key]["first_time"] = log_time
+                    if log_time > agg_errors[key]["last_time"]:
+                        agg_errors[key]["last_time"] = log_time
                     
                     # 收集前 5 个典型错误日志行
                     if len(sample_errors) < 5:
@@ -103,8 +111,7 @@ def analyze_privoxy_log(log_path, cutoff_time):
                         
         result = {
             "total_errors": total_errors,
-            "host_counter": host_counter,
-            "host_status_map": host_status_map,
+            "agg_errors": agg_errors,
             "sample_errors": sample_errors
         }
         return result, None
@@ -173,15 +180,34 @@ def main():
         if receive_id and bot.client:
             title = "🚨 Privoxy 代理异常监控报告"
             
-            # 格式化 Top 5 域名排行
-            top_hosts = analysis["host_counter"].most_common(5)
-            host_list_md = []
-            for host, count in top_hosts:
-                status_counter = analysis["host_status_map"].get(host, Counter())
-                # 拼接常见状态码，如 "502(10次)"
-                status_detail = ", ".join([f"{code}({c}次)" for code, c in status_counter.most_common(2)])
-                host_list_md.append(f"• **{host}**：异常 {count} 次 (状态码: {status_detail})")
-            hosts_text = "\n".join(host_list_md) if host_list_md else "无"
+            # 按次数倒序排列聚合好的异常项
+            sorted_aggs = sorted(
+                analysis["agg_errors"].items(),
+                key=lambda x: x[1]["count"],
+                reverse=True
+            )
+            
+            # 格式化 Top 5 聚合详情
+            detail_list = []
+            for (client_ip, host, status), info in sorted_aggs[:5]:
+                count = info["count"]
+                first_t = info["first_time"]
+                last_t = info["last_time"]
+                
+                # 时间段格式化逻辑
+                if first_t.date() == last_t.date():
+                    if first_t.strftime('%H:%M') == last_t.strftime('%H:%M'):
+                        time_str = first_t.strftime('%m-%d %H:%M')
+                    else:
+                        time_str = f"{first_t.strftime('%m-%d %H:%M')} ~ {last_t.strftime('%H:%M')}"
+                else:
+                    time_str = f"{first_t.strftime('%m-%d %H:%M')} ~ {last_t.strftime('%m-%d %H:%M')}"
+                
+                detail_list.append(
+                    f"• **源IP**: `{client_ip}` ➔ **Host**: `{host}` ({status})\n"
+                    f"  **异常频次**: {count} 次 | **时间范围**: {time_str}"
+                )
+            details_text = "\n".join(detail_list) if detail_list else "无"
 
             # 格式化典型错误日志
             sample_text = "\n".join([f"`{line}`" for line in analysis["sample_errors"]])
@@ -201,7 +227,7 @@ def main():
                 },
                 {
                     "is_short": False,
-                    "text": {"tag": "lark_md", "content": f"📊 **主要故障域名 (Top 5)**\n{hosts_text}"}
+                    "text": {"tag": "lark_md", "content": f"📊 **主要故障详情 (Top 5)**\n{details_text}"}
                 },
                 {
                     "is_short": False,
