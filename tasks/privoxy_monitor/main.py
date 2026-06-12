@@ -216,6 +216,7 @@ def main():
             table_columns = [
                 {
                     "name": "ip",
+                    "data_type": "text",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "源IP"
@@ -223,6 +224,7 @@ def main():
                 },
                 {
                     "name": "host",
+                    "data_type": "text",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "目标Host"
@@ -230,6 +232,7 @@ def main():
                 },
                 {
                     "name": "status",
+                    "data_type": "text",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "状态"
@@ -237,6 +240,7 @@ def main():
                 },
                 {
                     "name": "count",
+                    "data_type": "text",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "次数"
@@ -244,6 +248,7 @@ def main():
                 },
                 {
                     "name": "time",
+                    "data_type": "text",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "时间范围"
@@ -267,26 +272,11 @@ def main():
                     time_str = f"{first_t.strftime('%m-%d %H:%M')}~{last_t.strftime('%m-%d %H:%M')}"
                 
                 table_rows.append({
-                    "ip": {
-                        "tag": "plain_text",
-                        "content": client_ip
-                    },
-                    "host": {
-                        "tag": "plain_text",
-                        "content": host
-                    },
-                    "status": {
-                        "tag": "plain_text",
-                        "content": status
-                    },
-                    "count": {
-                        "tag": "plain_text",
-                        "content": str(count)
-                    },
-                    "time": {
-                        "tag": "plain_text",
-                        "content": time_str
-                    }
+                    "ip": client_ip,
+                    "host": host,
+                    "status": status,
+                    "count": str(count),
+                    "time": time_str
                 })
                 
             table_element = {
