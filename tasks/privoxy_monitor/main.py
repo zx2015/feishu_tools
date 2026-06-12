@@ -226,12 +226,12 @@ def main():
                 },
                 {
                     "name": "status",
-                    "data_type": "text",
+                    "data_type": "options",
                     "display_name": "状态"
                 },
                 {
                     "name": "count",
-                    "data_type": "text",
+                    "data_type": "number",
                     "display_name": "次数"
                 },
                 {
@@ -256,11 +256,22 @@ def main():
                 else:
                     time_str = f"{first_t.strftime('%m-%d %H:%M')}~{last_t.strftime('%m-%d %H:%M')}"
                 
+                # 根据状态码决定标签颜色
+                if status.startswith('5'):
+                    status_color = "red"
+                elif status.startswith('4'):
+                    status_color = "grey"
+                else:
+                    status_color = "blue"
+
                 table_rows.append({
                     "ip": client_ip,
                     "host": host,
-                    "status": status,
-                    "count": str(count),
+                    "status": {
+                        "text": status,
+                        "color": status_color
+                    },
+                    "count": count,
                     "time": time_str
                 })
                 
