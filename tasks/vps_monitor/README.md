@@ -22,9 +22,9 @@
 
 ```yaml
 vps:
-  veid: "1802962"
+  veid: "YOUR_VEID_HERE"
   api_key: "YOUR_API_KEY_HERE"
-  receive_id: "ou_fcef06acfbd7bb9d1d73cb0d5f49b3a5" # 接收消息的飞书 Open ID
+  receive_id: "YOUR_RECEIVE_ID_HERE" # 接收消息的飞书 Open ID
 ```
 
 ## 数据处理说明

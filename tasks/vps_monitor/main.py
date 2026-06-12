@@ -37,11 +37,19 @@ def main():
     config = Config()
     veid = config.get('vps.veid')
     api_key = config.get('vps.api_key')
-    receive_id = config.get('feishu.default_receive_id')
+    
+    # 优先使用 VPS 任务特有的 receive_id，若无则使用全局默认 default_receive_id
+    receive_id = config.get('vps.receive_id') or config.get('feishu.default_receive_id')
 
     if not veid or not api_key:
         logging.error("未配置 VPS veid 或 api_key")
         return
+
+    # 初始化飞书 Bot
+    bot = FeishuBot(
+        app_id=config.feishu_app_id,
+        app_secret=config.feishu_app_secret
+    )
 
     # 2. 获取数据
     logging.info(f"正在获取 VPS ({veid}) 的运行状态...")
@@ -50,6 +58,27 @@ def main():
     if not data or data.get('error') != 0:
         error_msg = data.get('message', '未知错误') if data else '请求失败'
         logging.error(f"API 返回错误: {error_msg}")
+        
+        # 增强容错通知：发送错误通知卡片到飞书
+        if receive_id and bot.client:
+            logging.info("正在发送飞书错误警报卡片...")
+            err_title = "🚨 VPS 状态监控失败"
+            err_fields = [
+                {
+                    "is_short": True,
+                    "text": {"tag": "lark_md", "content": f"💻 **VPS ID**\n{veid}"}
+                },
+                {
+                    "is_short": True,
+                    "text": {"tag": "lark_md", "content": f"⚠️ **错误原因**\n{error_msg}"}
+                }
+            ]
+            bot.send_card_to_chat(
+                receive_id=receive_id,
+                title=err_title,
+                fields=err_fields,
+                status="error"
+            )
         return
 
     # 3. 解析数据
@@ -62,12 +91,31 @@ def main():
     remaining_data_gb = round(total_data_gb - used_data_gb, 2)
     usage_percent = round((used_data_gb / total_data_gb) * 100, 1) if total_data_gb > 0 else 0
     
-    reset_time = format_timestamp(data.get('data_next_reset', 0))
+    # 避免 Unix 时间戳为 0 导致转换错误
+    next_reset = data.get('data_next_reset', 0)
+    if next_reset > 0:
+        reset_datetime = datetime.fromtimestamp(next_reset)
+        reset_date = reset_datetime.strftime('%Y-%m-%d')
+        
+        # 计算距离重置日期的天数/小时数
+        delta = reset_datetime - datetime.now()
+        if delta.total_seconds() > 0:
+            if delta.days > 0:
+                days_left_str = f"{delta.days} 天"
+            else:
+                hours_left = int(delta.total_seconds() / 3600)
+                days_left_str = f"{hours_left} 小时"
+        else:
+            days_left_str = "已重置"
+    else:
+        reset_date = "未知"
+        days_left_str = "未知"
+        
     location = data.get('node_location', 'Unknown')
     plan = data.get('plan', 'Unknown')
 
     # 4. 构造卡片内容
-    title = "🖥️ VPS 状态报告: US-Cloud"
+    title = f"🖥️ VPS 状态报告: {hostname or 'US-Cloud'}"
     
     fields = [
         {
@@ -87,8 +135,12 @@ def main():
             "text": {"tag": "lark_md", "content": f"🔋 **剩余流量**\n{remaining_data_gb} GB"}
         },
         {
-            "is_short": False,
-            "text": {"tag": "lark_md", "content": f"📅 **重置日期**\n{reset_time.split(' ')[0]}"}
+            "is_short": True,
+            "text": {"tag": "lark_md", "content": f"📅 **重置日期**\n{reset_date}"}
+        },
+        {
+            "is_short": True,
+            "text": {"tag": "lark_md", "content": f"⏳ **距离重置**\n{days_left_str}"}
         }
     ]
 
@@ -100,11 +152,6 @@ def main():
         status = "error"
 
     # 5. 发送消息
-    bot = FeishuBot(
-        app_id=config.feishu_app_id,
-        app_secret=config.feishu_app_secret
-    )
-    
     logging.info("正在发送飞书卡片消息...")
     bot.send_card_to_chat(
         receive_id=receive_id,
