@@ -216,7 +216,6 @@ def main():
             table_columns = [
                 {
                     "name": "ip",
-                    "width": "auto",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "源IP"
@@ -224,7 +223,6 @@ def main():
                 },
                 {
                     "name": "host",
-                    "width": "auto",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "目标Host"
@@ -232,7 +230,6 @@ def main():
                 },
                 {
                     "name": "status",
-                    "width": "auto",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "状态"
@@ -240,7 +237,6 @@ def main():
                 },
                 {
                     "name": "count",
-                    "width": "auto",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "次数"
@@ -248,7 +244,6 @@ def main():
                 },
                 {
                     "name": "time",
-                    "width": "auto",
                     "display_name": {
                         "tag": "plain_text",
                         "content": "时间范围"
