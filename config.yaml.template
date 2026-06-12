@@ -10,6 +10,10 @@ vps:
   veid: "123456"
   api_key: "private_key_here"
 
+# Privoxy 日志监控配置
+privoxy:
+  log_path: "/var/log/privoxy/logfile"
+
 # 其他全局配置
 settings:
   log_level: "INFO"
