@@ -217,42 +217,27 @@ def main():
                 {
                     "name": "ip",
                     "data_type": "text",
-                    "display_name": {
-                        "tag": "plain_text",
-                        "content": "源IP"
-                    }
+                    "display_name": "源IP"
                 },
                 {
                     "name": "host",
                     "data_type": "text",
-                    "display_name": {
-                        "tag": "plain_text",
-                        "content": "目标Host"
-                    }
+                    "display_name": "目标Host"
                 },
                 {
                     "name": "status",
                     "data_type": "text",
-                    "display_name": {
-                        "tag": "plain_text",
-                        "content": "状态"
-                    }
+                    "display_name": "状态"
                 },
                 {
                     "name": "count",
                     "data_type": "text",
-                    "display_name": {
-                        "tag": "plain_text",
-                        "content": "次数"
-                    }
+                    "display_name": "次数"
                 },
                 {
                     "name": "time",
                     "data_type": "text",
-                    "display_name": {
-                        "tag": "plain_text",
-                        "content": "时间范围"
-                    }
+                    "display_name": "时间范围"
                 }
             ]
             

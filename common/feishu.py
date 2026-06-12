@@ -48,7 +48,7 @@ class FeishuBot:
 
     def send_card_to_chat(self, receive_id: str, title: str, content: str = None, fields: list = None, status: str = "info", receive_id_type: str = "open_id", elements: list = None):
         """
-        应用模式：发送卡片消息给指定接收者。支持内容正文、字段列表或完全自定义的 elements 列表。
+        应用模式：发送卡片消息给指定接收者。支持内容正文、字段列表或完全自定义的 elements 列表 (支持卡片 2.0 协议)。
         """
         if not self.client:
             logging.error("未初始化 App ID/Secret")
@@ -80,17 +80,27 @@ class FeishuBot:
 
         card_elements.append({"tag": "hr"})
         card_elements.append({
-            "tag": "note",
-            "elements": [{"content": "来自 Feishu Tools 自动化提醒", "tag": "plain_text"}]
+            "tag": "div",
+            "text": {
+                "tag": "lark_md",
+                "content": "<font color='grey'>来自 Feishu Tools 自动化提醒</font>"
+            }
         })
 
+        # 使用卡片 2.0 JSON 协议，以支持高阶表格组件
         card_content = {
+            "schema": "2.0",
             "header": {
                 "template": header_template,
                 "title": {"content": title, "tag": "plain_text"}
             },
-            "elements": card_elements
+            "body": {
+                "elements": card_elements
+            }
         }
+
+        # 调试日志：打印发送给飞书的卡片完整 JSON 结构
+        logging.info(f"发送的飞书卡片完整 JSON 结构:\n{json.dumps(card_content, indent=2, ensure_ascii=False)}")
 
         request = CreateMessageRequest.builder() \
             .receive_id_type(receive_id_type) \
@@ -122,7 +132,7 @@ class FeishuBot:
 
     def send_webhook_card(self, title: str, content: str, status: str = "info"):
         """
-        Webhook 模式：发送卡片消息
+        Webhook 模式：发送卡片消息 (支持卡片 2.0 协议)
         """
         if not self.webhook_url:
             logging.error("未提供 Webhook URL")
@@ -137,21 +147,27 @@ class FeishuBot:
         header_template = colors.get(status, "blue")
 
         card = {
+            "schema": "2.0",
             "header": {
                 "template": header_template,
                 "title": {"content": title, "tag": "plain_text"}
             },
-            "elements": [
-                {
-                    "tag": "div",
-                    "text": {"content": content, "tag": "lark_md"}
-                },
-                {"tag": "hr"},
-                {
-                    "tag": "note",
-                    "elements": [{"content": "来自 Feishu Tools 自动化提醒", "tag": "plain_text"}]
-                }
-            ]
+            "body": {
+                "elements": [
+                    {
+                        "tag": "div",
+                        "text": {"content": content, "tag": "lark_md"}
+                    },
+                    {"tag": "hr"},
+                    {
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": "<font color='grey'>来自 Feishu Tools 自动化提醒</font>"
+                        }
+                    }
+                ]
+            }
         }
 
         data = {
