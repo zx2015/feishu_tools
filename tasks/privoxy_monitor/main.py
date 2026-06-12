@@ -4,6 +4,7 @@ import re
 import logging
 from datetime import datetime, timedelta
 from collections import Counter
+from urllib.parse import urlparse
 
 # 将项目根目录加入 sys.path 以导入 common 模块
 base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -89,8 +90,13 @@ def analyze_privoxy_log(log_path, cutoff_time):
                     total_errors += 1
                     client_ip = match.group(1)
                     host_port = match.group(4)
-                    # 提取 host (去除端口)
-                    host = host_port.split(':')[0] if ':' in host_port else host_port
+                    
+                    # 提取 host (兼容以 http/https 开头的完整 URL 及普通 host:port)
+                    if host_port.startswith('http://') or host_port.startswith('https://'):
+                        netloc = urlparse(host_port).netloc
+                    else:
+                        netloc = host_port.split('/')[0]
+                    host = netloc.split(':')[0] if ':' in netloc else netloc
                     
                     key = (client_ip, host, status_code)
                     if key not in agg_errors:
@@ -217,27 +223,32 @@ def main():
                 {
                     "name": "ip",
                     "data_type": "text",
-                    "display_name": "源IP"
+                    "display_name": "源IP",
+                    "width": "18%"
                 },
                 {
                     "name": "host",
                     "data_type": "text",
-                    "display_name": "目标Host"
+                    "display_name": "目标Host",
+                    "width": "35%"
                 },
                 {
                     "name": "status",
                     "data_type": "options",
-                    "display_name": "状态"
+                    "display_name": "状态",
+                    "width": "12%"
                 },
                 {
                     "name": "count",
                     "data_type": "number",
-                    "display_name": "次数"
+                    "display_name": "次数",
+                    "width": "12%"
                 },
                 {
                     "name": "time",
                     "data_type": "text",
-                    "display_name": "时间范围"
+                    "display_name": "时间范围",
+                    "width": "23%"
                 }
             ]
             
